@@ -1,0 +1,65 @@
+[core]
+  editor = mvim
+  whitespace = fix,-indent-with-non-tab,trailing-space,cr-at-eol
+  excludesfile = ~/.gitignore
+
+[include]
+  path = ~/.gitconfig.local
+
+[color]
+  ui = auto
+  branch = auto
+  diff = auto
+  interactive = auto
+  status = auto
+
+[alias]
+  a = add --all
+  c = commit
+  cm = commit -m
+  cam = commit -am
+  fu = fetch upstream
+  co = checkout
+  cob = checkout -b
+  st = status
+  br = branch -av
+
+[credential]
+  helper = osxkeychain
+
+[url "https://github.com/"]
+  insteadOf = gh:
+
+[filter "lfs"]
+  clean = git lfs clean %f
+  smudge = git lfs smudge %f
+  required = true
+
+[push]
+  default = simple
+
+[web]
+  browser = google-chrome
+
+[credential]
+  helper = osxkeychain
+
+[difftool "Kaleidoscope"]
+  cmd = ksdiff --partial-changeset --relative-path \"$MERGED\" -- \"$LOCAL\" \"$REMOTE\"
+
+[diff]
+  tool = Kaleidoscope
+
+[difftool]
+  prompt = false
+
+[mergetool "Kaleidoscope"]
+  cmd = ksdiff --merge --output \"$MERGED\" --base \"$BASE\" -- \"$LOCAL\" --snapshot \"$REMOTE\" --snapshot
+  trustExitCode = true
+
+[mergetool]
+  prompt = false
+  keepBackup = false
+
+[merge]
+  tool = Kaleidoscope

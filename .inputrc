@@ -1,0 +1,18 @@
+# Set visible bell
+set bell-style visible                   # Options: none, visible, audible
+
+# Completion Options
+set page-completions on                  # Page completions more like.
+set completion-ignore-case on            # Ignore case
+set show-all-if-ambiguous on             # Enable single tab completion
+
+# Allow up/down autocompletion of commands from bash history.
+# From: coderwall.com/p/oqtj8w
+"\e[A": history-search-backward
+"\e[B": history-search-forward
+
+# Fix for accents input with UTF-8.
+set meta-flag on
+set input-meta on
+set output-meta on
+set convert-meta off
