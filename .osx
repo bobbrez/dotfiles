@@ -55,8 +55,8 @@ defaults write com.apple.finder QLEnableTextSelection -bool true
 defaults write com.apple.dock autohide -bool true
 
 # Set the dock magnification
-defaults write com.apple.dock tilesize -int 16
-defaults write com.apple.dock tilesize -int 4
+defaults write com.apple.dock tilesize -int 8
+defaults write com.apple.dock largesize -float 72
 
 ###############################################################################
 # Google Chrome                                                               #
