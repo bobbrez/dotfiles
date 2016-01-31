@@ -3,7 +3,7 @@ export BASH_IT="/Users/bob/.bash_it"
 
 # Lock and Load a custom theme file
 # location /.bash_it/themes/
-export BASH_IT_THEME='envy'
+export BASH_IT_THEME='sexy'
 
 # Your place for hosting Git repos. I use this for private repos.
 export GIT_HOSTING='git@github.com'
