@@ -63,3 +63,6 @@
 
 [merge]
   tool = Kaleidoscope
+[user]
+	name = Bob Breznak
+	email = bob.breznak@gmail.com
