@@ -27,42 +27,6 @@
 [credential]
   helper = osxkeychain
 
-[url "https://github.com/"]
-  insteadOf = gh:
-
-[filter "lfs"]
-  clean = git lfs clean %f
-  smudge = git lfs smudge %f
-  required = true
-
-[push]
-  default = simple
-
-[web]
-  browser = google-chrome
-
-[credential]
-  helper = osxkeychain
-
-[difftool "Kaleidoscope"]
-  cmd = ksdiff --partial-changeset --relative-path \"$MERGED\" -- \"$LOCAL\" \"$REMOTE\"
-
-[diff]
-  tool = Kaleidoscope
-
-[difftool]
-  prompt = false
-
-[mergetool "Kaleidoscope"]
-  cmd = ksdiff --merge --output \"$MERGED\" --base \"$BASE\" -- \"$LOCAL\" --snapshot \"$REMOTE\" --snapshot
-  trustExitCode = true
-
-[mergetool]
-  prompt = false
-  keepBackup = false
-
-[merge]
-  tool = Kaleidoscope
 [user]
-	name = Bob Breznak
-	email = bob.breznak@gmail.com
+  name = Bob Breznak
+  email = bob.breznak@gmail.com
