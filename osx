@@ -30,6 +30,10 @@ defaults write com.apple.frameworks.diskimages auto-open-ro-root -bool true
 defaults write com.apple.frameworks.diskimages auto-open-rw-root -bool true
 defaults write com.apple.finder OpenWindowForNewRemovableDisk -bool true
 
+# Set the clock to 24 hour mode
+defaults write com.apple.menuextra.clock DateFormat -string 'EEE MMM d  H:mm:ss'
+
+
 ###############################################################################
 # Trackpad, mouse, keyboard, Bluetooth accessories, and input                 #
 ###############################################################################
@@ -66,7 +70,7 @@ defaults write com.apple.finder QLEnableTextSelection -bool true
 # Dock, Dashboard, and hot corners                                            #
 ###############################################################################
 
-# Enable highlight hover effect for the grid view of a stack (Dock)
+highlight hover effect for the grid view of a stack (Dock)
 defaults write com.apple.dock mouse-over-hilite-stack -bool true
 
 # Automatically hide and show the Dock
@@ -84,6 +88,9 @@ defaults write com.apple.dock static-only -bool true
 
 # Don’t automatically rearrange Spaces based on most recent use
 defaults write com.apple.dock mru-spaces -bool false
+
+# Automatically hide the menubar
+defaults write NSGlobalDomain _HIHideMenuBar -bool true
 
 ###############################################################################
 # Google Chrome                                                               #
