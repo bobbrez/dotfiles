@@ -1,6 +1,9 @@
 echo "Setting up OSX"
 ./.dotfiles/__scripts__/setup_osx.sh
 
+echo "Setting up Apps"
+./.dotfiles/__scripts__/setup_apps.zsh
+
 echo "Setting up Homebrew"
 ./.dotfiles/__scripts__/setup_homebrew.zsh
 
