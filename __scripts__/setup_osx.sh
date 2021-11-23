@@ -70,7 +70,7 @@ defaults write com.apple.finder QLEnableTextSelection -bool true
 # Dock, Dashboard, and hot corners                                            #
 ###############################################################################
 
-highlight hover effect for the grid view of a stack (Dock)
+# highlight hover effect for the grid view of a stack (Dock)
 defaults write com.apple.dock mouse-over-hilite-stack -bool true
 
 # Automatically hide and show the Dock
