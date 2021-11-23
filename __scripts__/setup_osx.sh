@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+[ -f ~/.osx_setup ] && echo "OSX Setup already run, remove .osx_setup to re-run" && exit 0
+
 # ~/.osx — https://mths.be/osx
 
 # Ask for the administrator password upfront
@@ -120,10 +122,25 @@ defaults write com.apple.TimeMachine DoNotOfferNewDisksForBackup -bool true
 defaults -currentHost write com.apple.ImageCapture disableHotPlug -bool true
 
 ###############################################################################
+# Appstore & Updates                                                          #
+###############################################################################
+
+# Enable automatic app updates from the Mac App Store
+defaults write /Library/Preferences/com.apple.commerce AutoUpdate -bool TRUE
+
+# Enable automatic Mac OS Updates
+defaults write /Library/Preferences/com.apple.commerce AutoUpdateRestartRequired -bool TRUE
+
+# Schedule automatic updates
+defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled -bool TRUE
+
+###############################################################################
 # Kill affected applications                                                  #
 ###############################################################################
 
-for app in "Dock" "Finder" "Google Chrome"; do
+for app in "Dock" "Finder" "Google Chrome" "Safari"; do
 	killall "${app}" &> /dev/null
 done
 echo "Done. Note that some of these changes require a logout/restart to take effect."
+
+date > ~/.osx_setup

@@ -19,6 +19,7 @@ plugins+=(direnv)
 plugins+=(zsh-nodenv)
 plugins+=(aws)
 plugins+=(terraform)
+plugins+=(docker)
 
 source $ZSH/oh-my-zsh.sh
 

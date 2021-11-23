@@ -1,3 +1,6 @@
+# Install OhMyZsh
+sh -c "export RUNZSH=no && $(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+
 # Replace the generated zshrc with the custom one here, the backup should be discared aferwards
 mv ~/.zshrc ~/.zshrc.bkup
 ln -s ~/.dotfiles/terminal/zshrc ~/.zshrc
@@ -8,3 +11,5 @@ ln -s ~/.dotfiles/terminal/p10k.zsh ~/.p10k.zsh
 
 # Install Zsh Nodenv
 git clone https://github.com/mattberther/zsh-nodenv ~/.oh-my-zsh/custom/plugins/zsh-nodenv
+
+exec zsh -l
