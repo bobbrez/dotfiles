@@ -16,11 +16,12 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 
 plugins=(git)
 plugins+=(ssh-agent)
-plugins+=(direnv)
 plugins+=(zsh-nodenv)
 plugins+=(aws)
 plugins+=(terraform)
 plugins+=(docker)
+
+eval "$(direnv hook zsh)"
 
 source $ZSH/oh-my-zsh.sh
 

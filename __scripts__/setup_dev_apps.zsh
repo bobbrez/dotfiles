@@ -9,3 +9,6 @@ brew install visual-studio-code
 
 # Chrome
 brew install google-chrome
+
+# The Silver Searcher
+brew install the_silver_searcher

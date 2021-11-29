@@ -8,9 +8,6 @@ mas install 497799835
 # Install 1Password
 mas install 1333542190
 
-# Install 1Password for Safari
-mas install 1569813296
-
 # Install Slack
 mas install 803453959
 
