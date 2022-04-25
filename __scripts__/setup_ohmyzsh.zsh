@@ -12,4 +12,7 @@ ln -s ~/.dotfiles/terminal/p10k.zsh ~/.p10k.zsh
 # Install Zsh Nodenv
 git clone https://github.com/mattberther/zsh-nodenv ~/.oh-my-zsh/custom/plugins/zsh-nodenv
 
+# Setup Brew
+eval $(/opt/homebrew/bin/brew shellenv)
+
 exec zsh -l

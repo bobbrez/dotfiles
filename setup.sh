@@ -10,9 +10,6 @@ echo "Setting up Apps"
 echo "Setting up iTerm2"
 ./.dotfiles/__scripts__/setup_iterm2.zsh
 
-echo "Setting up Vim"
-./.dotfiles/__scripts__/setup_vim.zsh
-
 echo "Setting up Git"
 ./.dotfiles/__scripts__/setup_git.zsh
 
