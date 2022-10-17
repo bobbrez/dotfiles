@@ -92,7 +92,7 @@ defaults write com.apple.dock static-only -bool true
 defaults write com.apple.dock mru-spaces -bool false
 
 # Automatically hide the menubar
-defaults write NSGlobalDomain _HIHideMenuBar -bool true
+# defaults write NSGlobalDomain _HIHideMenuBar -bool true
 
 ###############################################################################
 # Google Chrome                                                               #
