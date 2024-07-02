@@ -10,9 +10,21 @@ git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$
 ln -s ~/.dotfiles/terminal/p10k.zsh ~/.p10k.zsh
 
 # Install Zsh Nodenv
-git clone https://github.com/mattberther/zsh-nodenv ~/.oh-my-zsh/custom/plugins/zsh-nodenv
+# git clone https://github.com/mattberther/zsh-nodenv ~/.oh-my-zsh/custom/plugins/zsh-nodenv
+
+# Install Zsh Syntax Highlighting
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+
+git clone https://github.com/powerline/fonts.git --depth=1
+cd fonts
+./install.sh
+cd ..
+rm -rf fonts
 
 # Setup Brew
 eval $(/opt/homebrew/bin/brew shellenv)
+
+# Install Python Virtual
+brew install pyenv-virtualenv
 
 exec zsh -l

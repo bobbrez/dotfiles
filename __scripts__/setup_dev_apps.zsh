@@ -1,3 +1,7 @@
+# Fonts
+brew install --cask font-meslo-lg
+brew install --cask font-fira-code
+
 # Docker
 brew install --cask docker
 
@@ -12,3 +16,6 @@ brew install google-chrome
 
 # The Silver Searcher
 brew install the_silver_searcher
+
+# ZSH Syntax Highlighting
+brew install zsh-syntax-highlighting

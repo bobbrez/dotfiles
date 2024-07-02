@@ -17,15 +17,19 @@ export PIPENV_PYTHON="$PYENV_ROOT/shims/python"
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
 ZSH_THEME="powerlevel10k/powerlevel10k"
+# ZSH_THEME="robbyrussell"
 
 plugins=(
   git
   ssh-agent
-  zsh-nodenv
+  #zsh-nodenv
   aws
   terraform
   docker
   pyenv
+  asdf
+  zsh-autosuggestions
+  zsh-syntax-highlighting # Must go at end of config list
 )
 
 eval "$(/opt/homebrew/bin/brew shellenv)"
