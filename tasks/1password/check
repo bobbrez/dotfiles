@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+#MISE description="Verify 1Password CLI is installed and connected to at least one account"
+#MISE depends=["1password:bundle"]
+set -euo pipefail
+
+if ! command -v op >/dev/null 2>&1; then
+  cat <<'EOF'
+1Password CLI (op) not found.
+
+Install the 1Password desktop app from https://1password.com/downloads,
+then enable the CLI integration:
+  1Password -> Settings -> Developer -> 'Integrate with 1Password CLI'
+
+EOF
+  read -r -p "Press enter once op is installed and CLI integration is enabled... "
+fi
+
+while :; do
+  accounts=$(op account list --format=json 2>/dev/null || true)
+  if [[ -n "$accounts" && "$accounts" != "[]" ]]; then
+    break
+  fi
+
+  cat <<'EOF'
+
+1Password CLI is not connected to any accounts.
+
+In the 1Password desktop app, please:
+  1. Sign in to your 1Password account(s)
+  2. Settings -> Developer -> enable 'Integrate with 1Password CLI'
+  3. Settings -> Developer -> enable 'Use the system authentication service' (Touch ID)
+
+EOF
+  read -r -p "Press enter once complete to re-check... "
+done
+
+echo "1Password CLI connected:"
+op account list

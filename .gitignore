@@ -1,1 +1,4 @@
 tasks/1password/1password_keys
+.osx_setup
+.needs_restart
+

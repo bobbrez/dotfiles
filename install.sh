@@ -5,7 +5,7 @@ DOTFILES_PATH="${DOTFILES_PATH:-$HOME/.dotfiles}"
 DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/bobbrez/dotfiles.git}"
 
 if ! command -v git >/dev/null 2>&1; then
-  echo "git not found — installing Xcode Command Line Tools..."
+  echo "git not found -- installing Xcode Command Line Tools..."
   xcode-select --install || true
   echo "Re-run this command once the Command Line Tools finish installing."
   exit 1
@@ -19,5 +19,11 @@ else
   git clone "$DOTFILES_REPO" "$DOTFILES_PATH"
 fi
 
+if ! command -v mise >/dev/null 2>&1; then
+  echo "Installing mise"
+  curl -fsSL https://mise.run | sh
+  export PATH="$HOME/.local/bin:$PATH"
+fi
+
 cd "$DOTFILES_PATH"
-exec ./run "$@"
+exec mise run apply "$@"

@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+#MISE description="Fetch SSH keys listed in 1password_keys from 1Password into ~/.ssh"
+#MISE depends=["1password:check"]
+set -euo pipefail
+
+TASK_DIR="$MISE_PROJECT_ROOT/tasks/1password"
+KEYS_FILE="$TASK_DIR/1password_keys"
+
+if [[ ! -f "$KEYS_FILE" ]]; then
+  echo "error: no $KEYS_FILE" >&2
+  echo "run 'mise run 1password:configure' to pick keys to sync, or 'mise run 1password:apply'" >&2
+  exit 1
+fi
+
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+
+echo "Syncing SSH keys from 1Password -> ~/.ssh"
+
+while IFS= read -r line; do
+  [[ -z "$line" || "$line" == \#* ]] && continue
+  read -r fname vid iid <<< "$line"
+  [[ -z "${fname:-}" || -z "${vid:-}" || -z "${iid:-}" ]] && continue
+
+  priv="$HOME/.ssh/$fname"
+  pub="$HOME/.ssh/$fname.pub"
+
+  if [[ -f "$priv" ]]; then
+    echo "  $fname already present -- skipping fetch (delete to re-sync)"
+  else
+    echo "  Fetching $fname from 1Password..."
+    if op read "op://$vid/$iid/private key?ssh-format=openssh" > "$priv.tmp" 2>/dev/null; then
+      mv "$priv.tmp" "$priv"
+      chmod 600 "$priv"
+    else
+      rm -f "$priv.tmp"
+      echo "    failed to fetch private key for $fname"
+      continue
+    fi
+
+    if op read "op://$vid/$iid/public key" > "$pub.tmp" 2>/dev/null; then
+      mv "$pub.tmp" "$pub"
+      chmod 644 "$pub"
+    else
+      rm -f "$pub.tmp"
+    fi
+  fi
+
+  echo "  Adding $fname to ssh-agent (Apple keychain)"
+  ssh-add --apple-use-keychain "$priv" || echo "    ssh-add failed for $fname"
+done < "$KEYS_FILE"

@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+#MISE description="Install Oh My Zsh, Powerlevel10k, Powerline fonts, and symlink configs"
+set -euo pipefail
+
+TASK_DIR="$MISE_PROJECT_ROOT/tasks/zsh"
+
+if [[ -d "$HOME/.oh-my-zsh/.git" ]]; then
+  echo "OhMyZSH already installed, checking for deltas"
+  git -C "$HOME/.oh-my-zsh" fetch --quiet origin master
+  behind=$(git -C "$HOME/.oh-my-zsh" rev-list --count HEAD..origin/master)
+  ahead=$(git -C "$HOME/.oh-my-zsh" rev-list --count origin/master..HEAD)
+  local_changes=$(git -C "$HOME/.oh-my-zsh" status --short)
+
+  if [[ -n "$local_changes" ]]; then
+    echo
+    echo "Local modifications:"
+    echo "$local_changes"
+  fi
+  if (( behind > 0 )); then
+    echo
+    echo "$behind commit(s) behind upstream:"
+    git -C "$HOME/.oh-my-zsh" log --oneline HEAD..origin/master | head -20
+  fi
+  if (( ahead > 0 )); then
+    echo
+    echo "$ahead local commit(s) ahead of upstream"
+  fi
+  if [[ -z "$local_changes" ]] && (( behind == 0 && ahead == 0 )); then
+    echo "Up to date with upstream"
+  fi
+else
+  sh -c "export RUNZSH=no && $(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+
+  mv "$HOME/.zshrc" "$HOME/.zshrc.bkup"
+  ln -s "$TASK_DIR/zshrc" "$HOME/.zshrc"
+fi
+
+P10K_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
+if [[ -d "$P10K_DIR/.git" ]]; then
+  echo "Updating powerlevel10k"
+  git -C "$P10K_DIR" pull --quiet
+else
+  echo "Installing powerlevel10k"
+  git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$P10K_DIR"
+fi
+ln -sf "$TASK_DIR/p10k.zsh" "$HOME/.p10k.zsh"
+
+FONTS_DIR="$HOME/.powerline-fonts"
+if [[ -d "$FONTS_DIR/.git" ]]; then
+  echo "Updating powerline fonts"
+  git -C "$FONTS_DIR" pull --quiet
+else
+  echo "Installing powerline fonts"
+  git clone --depth=1 https://github.com/powerline/fonts.git "$FONTS_DIR"
+fi
+"$FONTS_DIR/install.sh"

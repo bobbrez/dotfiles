@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+#MISE description="Install 1Password CLI and runtime dependencies"
+#MISE depends=["brew:apply"]
+#MISE sources=["tasks/1password/Brewfile", "tasks/1password/runtime.Brewfile"]
+set -euo pipefail
+
+source "$MISE_PROJECT_ROOT/lib/brew.sh"
+ensure_brew "$MISE_PROJECT_ROOT/tasks/1password/Brewfile"
+ensure_brew "$MISE_PROJECT_ROOT/tasks/1password/runtime.Brewfile"

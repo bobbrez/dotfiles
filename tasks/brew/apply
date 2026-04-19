@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Apply full Homebrew state (install + bundle root Brewfile)"
+#MISE depends=["brew:install", "brew:bundle"]
+set -euo pipefail

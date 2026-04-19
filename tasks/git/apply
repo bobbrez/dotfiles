@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#MISE description="Symlink gitconfig/gitignore and pin origin remote"
+set -euo pipefail
+
+source "$MISE_PROJECT_ROOT/lib/symlink.sh"
+
+link_dotfile "$MISE_PROJECT_ROOT/tasks/git/gitignore" "$HOME/.gitignore"
+link_dotfile "$MISE_PROJECT_ROOT/tasks/git/gitconfig" "$HOME/.gitconfig"
+
+git -C "$MISE_PROJECT_ROOT" remote rm origin 2>/dev/null || true
+git -C "$MISE_PROJECT_ROOT" remote add origin git@github.com:bobbrez/dotfiles.git

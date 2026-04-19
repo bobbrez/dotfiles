@@ -1,0 +1,29 @@
+[env]
+DOTFILES_PATH = "{{ config_root }}"
+
+[settings]
+# Run tasks serially — several tasks are interactive (1password:sync prompts for
+# op CLI setup, git:apply can prompt on diff) and parallel prompts would interleave.
+jobs = 1
+
+[task_config]
+includes = ["tasks"]
+
+[tasks.apply]
+description = "Apply full machine state"
+depends = [
+  "brew:apply",
+  "1password:apply",
+  "ssh:apply",
+  "git:apply",
+  "zsh:apply",
+  "iterm2:apply",
+  "claude:apply",
+  "osx:apply",
+]
+run = '''
+if [[ -f "$MISE_PROJECT_ROOT/.needs_restart" ]]; then
+  printf "\n*** Some changes require a logout or restart to take effect ***\n\n"
+  rm "$MISE_PROJECT_ROOT/.needs_restart"
+fi
+'''

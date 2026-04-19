@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+#MISE description="Apply full 1Password SSH key sync (bundle + check + configure-if-needed + sync)"
+#MISE depends=["1password:check"]
+set -euo pipefail
+
+TASK_DIR="$MISE_PROJECT_ROOT/tasks/1password"
+KEYS_FILE="$TASK_DIR/1password_keys"
+
+while [[ ! -f "$KEYS_FILE" ]]; do
+  echo
+  echo "No $KEYS_FILE -- launching configure to pick SSH keys from 1Password"
+  echo
+  mise run 1password:configure
+  echo
+  read -r -p "Press enter once finished to continue... "
+  if [[ ! -f "$KEYS_FILE" ]]; then
+    echo "$KEYS_FILE still missing -- re-running configure."
+  fi
+done
+
+mise run 1password:sync

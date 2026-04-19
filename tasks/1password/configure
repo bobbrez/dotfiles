@@ -1,15 +1,17 @@
 #!/usr/bin/env zsh
+#MISE description="Interactively pick 1Password SSH keys to sync"
+#MISE alias="1p:configure"
 # Interactively pick which 1Password SSH keys to sync to ~/.ssh on setup.
-# Writes the selection to tasks/1password/1password_keys; the 1password task reads it.
+# Writes the selection to tasks/1password/1password_keys; the 1password:sync task reads it.
 set -e
 
-KEYS_FILE="${0:a:h}/1password_keys"
+KEYS_FILE="${MISE_PROJECT_ROOT:-${0:a:h:h:h}}/tasks/1password/1password_keys"
 
 die() { print -u2 "error: $*"; exit 1; }
 
 for cmd in op jq gum; do
   command -v "$cmd" >/dev/null \
-    || die "$cmd not found. Run ./run first, or 'brew install $cmd'."
+    || die "$cmd not found. Run 'mise run brew:apply' first, or 'brew install $cmd'."
 done
 
 TMP_ACCOUNTS=$(mktemp)

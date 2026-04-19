@@ -1,8 +1,13 @@
+#!/usr/bin/env bash
+#MISE description="Symlink ~/.ssh/config"
+set -euo pipefail
+
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 
-local dest=~/.ssh/config
-local src="${0:a:h}/config"
+src="$MISE_PROJECT_ROOT/tasks/ssh/config"
+dest="$HOME/.ssh/config"
+
 if [[ -L "$dest" && "$(readlink "$dest")" == "$src" ]]; then
   echo "~/.ssh/config already linked"
 else
@@ -10,7 +15,7 @@ else
     echo "Replacing existing symlink $dest -> $(readlink "$dest")"
     rm "$dest"
   elif [[ -e "$dest" ]]; then
-    local backup="${dest}.bkup.$(date +%Y%m%d%H%M%S)"
+    backup="${dest}.bkup.$(date +%Y%m%d%H%M%S)"
     echo "Backing up $dest to $backup"
     mv "$dest" "$backup"
   fi

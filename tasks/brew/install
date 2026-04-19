@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+#MISE description="Install Homebrew if missing, otherwise update"
+set -euo pipefail
+
+if [[ "${DOTFILES_SKIP_BREW:-}" == "1" ]]; then
+  echo "Skipping Homebrew install/update (DOTFILES_SKIP_BREW=1)"
+  exit 0
+fi
+
+if ! command -v brew >/dev/null 2>&1; then
+  echo "==> Installing Homebrew"
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+else
+  echo "==> Updating Homebrew"
+  brew update
+fi
