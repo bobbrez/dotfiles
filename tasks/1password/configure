@@ -1,0 +1,112 @@
+#!/usr/bin/env zsh
+# Interactively pick which 1Password SSH keys to sync to ~/.ssh on setup.
+# Writes the selection to tasks/1password/1password_keys; the 1password task reads it.
+set -e
+
+KEYS_FILE="${0:a:h}/1password_keys"
+
+die() { print -u2 "error: $*"; exit 1; }
+
+for cmd in op jq gum; do
+  command -v "$cmd" >/dev/null \
+    || die "$cmd not found. Run ./run first, or 'brew install $cmd'."
+done
+
+TMP_ACCOUNTS=$(mktemp)
+TMP_ITEMS=$(mktemp)
+trap 'rm -f "$TMP_ACCOUNTS" "$TMP_ITEMS"' EXIT
+
+gum spin --spinner dot --title "Connecting to 1Password and fetching SSH keys..." -- \
+  bash -c "op account list --format=json > '$TMP_ACCOUNTS' 2>/dev/null; op item list --categories 'SSH Key' --format=json > '$TMP_ITEMS' 2>/dev/null; true"
+
+accounts=$(<"$TMP_ACCOUNTS")
+[[ -n "$accounts" && "$accounts" != "[]" ]] \
+  || die "1Password CLI is not connected. In the desktop app: Settings -> Developer -> 'Integrate with 1Password CLI'."
+
+items_json=$(<"$TMP_ITEMS")
+if [[ -z "$items_json" || "$items_json" == "[]" ]]; then
+  print "No SSH keys found in 1Password. Add one in the desktop app, then re-run."
+  exit 0
+fi
+
+typeset -a item_ids item_titles vault_ids vault_names item_labels
+while IFS=$'\t' read -r id title vid vname; do
+  item_ids+=$id
+  item_titles+=$title
+  vault_ids+=$vid
+  vault_names+=$vname
+  item_labels+="$title  ($vname)"
+done < <(print -r -- "$items_json" | jq -r '.[] | [.id, .title, .vault.id, .vault.name] | @tsv')
+
+typeset -A existing_name
+if [[ -f "$KEYS_FILE" ]]; then
+  while IFS= read -r line; do
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    local f v i
+    read -r f v i <<< "$line"
+    [[ -n "$i" ]] && existing_name[$i]=$f
+  done < "$KEYS_FILE"
+fi
+
+slugify() {
+  local s=$(print -r -- "${1:l}" | tr -cs 'a-z0-9_-' '_')
+  s=${s##_}; s=${s%%_}
+  [[ -z "$s" ]] && s=id_key
+  print -r -- "$s"
+}
+
+typeset -a pre_selected_labels
+for (( i=1; i<=${#item_ids[@]}; i++ )); do
+  [[ -n "${existing_name[${item_ids[$i]}]}" ]] && pre_selected_labels+="${item_labels[$i]}"
+done
+selected_arg=${(j:,:)pre_selected_labels}
+
+local chosen
+if ! chosen=$(gum choose \
+  --no-limit \
+  --height 20 \
+  --header "Select SSH keys to sync to ~/.ssh  (space: toggle, enter: confirm)" \
+  ${selected_arg:+--selected="$selected_arg"} \
+  -- "${item_labels[@]}"); then
+  print "Aborted."
+  exit 0
+fi
+
+typeset -A chosen_set
+while IFS= read -r label; do
+  [[ -n "$label" ]] && chosen_set[$label]=1
+done <<< "$chosen"
+
+typeset -A final_name
+for (( i=1; i<=${#item_ids[@]}; i++ )); do
+  local iid=${item_ids[$i]}
+  local label=${item_labels[$i]}
+  [[ -z "${chosen_set[$label]}" ]] && continue
+
+  local default=${existing_name[$iid]:-$(slugify "${item_titles[$i]}")}
+  local input
+  if ! input=$(gum input \
+    --prompt "> " \
+    --header "Filename for '${item_titles[$i]}' (${vault_names[$i]})  —  Enter to keep '$default'" \
+    --placeholder "$default"); then
+    print "Aborted."
+    exit 0
+  fi
+  input="${input## }"; input="${input%% }"
+  final_name[$iid]=${input:-$default}
+done
+
+mkdir -p "${KEYS_FILE:h}"
+tmp=$(mktemp)
+{
+  print "# Managed by tasks/1password/configure — 1Password SSH keys to sync on setup"
+  print "# Format: <filename> <vault_id> <item_id>"
+  for (( i=1; i<=${#item_ids[@]}; i++ )); do
+    local iid=${item_ids[$i]}
+    local fn=${final_name[$iid]}
+    [[ -n "$fn" ]] && print "$fn ${vault_ids[$i]} $iid"
+  done
+} > "$tmp"
+mv "$tmp" "$KEYS_FILE"
+
+gum style --foreground 42 "Saved $KEYS_FILE"

@@ -1,0 +1,107 @@
+#!/usr/bin/env zsh
+# Interactively edit the root Brewfile. Shows a superset of packages in the
+# Brewfile and packages currently installed, lets you toggle which ones belong
+# in the Brewfile, then rewrites it.
+set -e
+
+DOTFILES_PATH=${DOTFILES_PATH:="${0:a:h:h:h}"}
+BREWFILE="$DOTFILES_PATH/Brewfile"
+
+die() { print -u2 "error: $*"; exit 1; }
+
+for cmd in brew gum; do
+  command -v "$cmd" >/dev/null \
+    || die "$cmd not found. Run ./run first, or 'brew install $cmd'."
+done
+
+[[ -f "$BREWFILE" ]] || die "No Brewfile at $BREWFILE"
+
+DUMP=$(mktemp)
+trap 'rm -f "$DUMP"' EXIT
+
+gum spin --spinner dot --title "Scanning installed Homebrew packages..." -- \
+  brew bundle dump --force --file="$DUMP"
+
+typeset -A in_brewfile installed line_for
+typeset -a all_keys
+
+parse_into() {
+  local file=$1 target=$2
+  local line type name key
+  while IFS= read -r line; do
+    [[ "$line" =~ '^[[:space:]]*(tap|brew|cask|mas|vscode)[[:space:]]+"([^"]+)"' ]] || continue
+    type=$match[1]
+    name=$match[2]
+    key="$type|$name"
+    case "$target" in
+      brewfile) in_brewfile[$key]=1 ;;
+      dump)     installed[$key]=1 ;;
+    esac
+    [[ -z "${line_for[$key]}" ]] && line_for[$key]=${line##[[:space:]]#}
+    (( ${all_keys[(Ie)$key]} )) || all_keys+=$key
+  done < "$file"
+}
+
+parse_into "$BREWFILE" brewfile
+parse_into "$DUMP" dump
+
+status_for() {
+  local key=$1
+  local bf=${in_brewfile[$key]}
+  local ix=${installed[$key]}
+  if [[ -n "$bf" && -n "$ix" ]]; then
+    print -r -- "tracked + installed"
+  elif [[ -n "$bf" ]]; then
+    print -r -- "tracked, MISSING"
+  else
+    print -r -- "installed, not tracked"
+  fi
+}
+
+typeset -a labels pre_selected
+typeset -A label_to_key
+
+sorted_keys=(${(o)all_keys})
+for key in $sorted_keys; do
+  local type=${key%%|*}
+  local name=${key#*|}
+  local state=$(status_for $key)
+  local label=$(printf "%-7s %-40s  [%s]" "$type" "$name" "$state")
+  labels+=$label
+  label_to_key[$label]=$key
+  [[ -n "${in_brewfile[$key]}" ]] && pre_selected+=$label
+done
+
+selected_arg=${(j:,:)pre_selected}
+
+local chosen
+if ! chosen=$(gum choose \
+  --no-limit \
+  --height 25 \
+  --header "Edit Brewfile  (space: toggle, enter: save)  —  $BREWFILE" \
+  ${selected_arg:+--selected="$selected_arg"} \
+  -- "${labels[@]}"); then
+  print "Aborted."
+  exit 0
+fi
+
+typeset -A chosen_keys
+while IFS= read -r label; do
+  local key=${label_to_key[$label]}
+  [[ -n "$key" ]] && chosen_keys[$key]=1
+done <<< "$chosen"
+
+tmp=$(mktemp)
+{
+  for type in tap brew cask mas vscode; do
+    for key in ${(ok)chosen_keys}; do
+      [[ "${key%%|*}" == "$type" ]] || continue
+      print -r -- "${line_for[$key]}"
+    done
+  done
+} > "$tmp"
+mv "$tmp" "$BREWFILE"
+
+local before=${#in_brewfile[@]}
+local after=${#chosen_keys[@]}
+gum style --foreground 42 "Saved $BREWFILE  ($before → $after entries)"

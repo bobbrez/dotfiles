@@ -29,12 +29,19 @@ echo "1Password CLI connected:"
 op account list
 
 local KEYS_FILE="${0:a:h}/1password_keys"
+local CONFIGURE_SCRIPT="${0:a:h}/configure"
 
-if [[ ! -f "$KEYS_FILE" ]]; then
+while [[ ! -f "$KEYS_FILE" ]]; do
   echo ""
-  echo "No $KEYS_FILE — run ./ssh_keys.zsh to pick SSH keys from 1Password"
-  return 0
-fi
+  echo "No $KEYS_FILE — launching configure to pick SSH keys from 1Password"
+  echo ""
+  "$CONFIGURE_SCRIPT"
+  echo ""
+  read "?Press enter once finished to continue... "
+  if [[ ! -f "$KEYS_FILE" ]]; then
+    echo "$KEYS_FILE still missing — re-running configure."
+  fi
+done
 
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh

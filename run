@@ -3,28 +3,15 @@ set -e
 
 autoload -Uz colors && colors
 
-if ! command -v brew &> /dev/null; then
-    print "\n${fg_bold[cyan]}Installing Homebrew${reset_color}"
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    eval "$(/opt/homebrew/bin/brew shellenv)"
-else
-    print "\n${fg_bold[cyan]}Updating Homebrew${reset_color}"
-    brew update
-fi
-
 DOTFILES_PATH=${DOTFILES_PATH:="${0:a:h}"}
 TASKS_DIR="$DOTFILES_PATH/tasks"
 
-if [[ -f "$DOTFILES_PATH/Brewfile" ]]; then
-  print "\n${fg_bold[cyan]}Installing $DOTFILES_PATH/Brewfile${reset_color}"
-  brew bundle --file="$DOTFILES_PATH/Brewfile"
-fi
-
 # Default task order — homebrew first so brew is available for later tasks.
 # Tasks not listed here run after, in alphabetical order.
-typeset -a default_order=(1password ssh git zsh iterm2 osx)
+typeset -a default_order=(1password ssh git claude zsh iterm2 osx)
 
 typeset -a requested_tasks
+typeset skip_brew=0
 while (( $# )); do
   case "$1" in
     --tasks)
@@ -37,8 +24,14 @@ while (( $# )); do
       requested_tasks=(${(s:,:)${${1#--tasks=}// /}})
       shift
       ;;
+    --skip-brew)
+      skip_brew=1
+      shift
+      ;;
     -h|--help)
-      print "Usage: setup.zsh [--tasks task1,task2,...]"
+      print "Usage: run [--tasks task1,task2,...] [--skip-brew]"
+      print
+      print "  --skip-brew   Skip all Homebrew operations (install/update and Brewfile bundling)"
       print
       print "Available tasks:"
       for d in $TASKS_DIR/*(N/); do
@@ -52,6 +45,22 @@ while (( $# )); do
       ;;
   esac
 done
+
+if (( skip_brew )); then
+  print "\n${fg_bold[yellow]}Skipping all Homebrew operations (--skip-brew)${reset_color}"
+elif ! command -v brew &> /dev/null; then
+  print "\n${fg_bold[cyan]}Installing Homebrew${reset_color}"
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+else
+  print "\n${fg_bold[cyan]}Updating Homebrew${reset_color}"
+  brew update
+fi
+
+if (( ! skip_brew )) && [[ -f "$DOTFILES_PATH/Brewfile" ]]; then
+  print "\n${fg_bold[cyan]}Installing $DOTFILES_PATH/Brewfile${reset_color}"
+  brew bundle --file="$DOTFILES_PATH/Brewfile"
+fi
 
 typeset -a task_names
 if (( ${#requested_tasks[@]} )); then
@@ -75,10 +84,12 @@ for name in $task_names; do
   print "\n${fg_bold[cyan]}Starting Task ${name}${reset_color}"
   (
     local task_dir="$TASKS_DIR/$name"
-    for bf in $task_dir/*.Brewfile(N); do
-      print "${fg_bold[cyan]}Installing ${bf:t}${reset_color}"
-      brew bundle --file="$bf"
-    done
+    if (( ! skip_brew )); then
+      for bf in $task_dir/*.Brewfile(N); do
+        print "${fg_bold[cyan]}Installing ${bf:t}${reset_color}"
+        brew bundle --file="$bf"
+      done
+    fi
     __run_task() { source "$task_dir/task" }
     __run_task
   )

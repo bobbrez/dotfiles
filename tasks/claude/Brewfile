@@ -1,0 +1,4 @@
+cask "claude"
+cask "claude-code"
+cask "visual-studio-code"
+vscode "anthropic.claude-code"
