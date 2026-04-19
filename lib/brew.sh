@@ -5,5 +5,5 @@ ensure_brew() {
   [[ "${DOTFILES_SKIP_BREW:-}" == "1" ]] && return 0
   [[ -f "$file" ]] || return 0
   echo "==> brew bundle --file=$file"
-  brew bundle --file="$file" --no-lock
+  brew bundle --file="$file"
 }

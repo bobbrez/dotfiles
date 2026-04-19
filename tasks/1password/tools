@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="Install tools used internally by the 1password task scripts (gum, ...)"
+#MISE depends=["brew:apply"]
+#MISE sources=["tasks/1password/tools.Brewfile"]
+set -euo pipefail
+
+source "$MISE_PROJECT_ROOT/lib/brew.sh"
+ensure_brew "$MISE_PROJECT_ROOT/tasks/1password/tools.Brewfile"

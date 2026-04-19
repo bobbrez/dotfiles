@@ -1,0 +1,9 @@
+# Packages to exclude from additional.Brewfile even though they're installed.
+# Useful for temporary test installs, per-machine-only packages, or anything
+# you don't want committed.
+#
+# One entry per line. Comments start with #. Accepted forms:
+#   foo                 ignore any package named "foo" (all types)
+#   cask:foo            ignore only the cask "foo"
+#   brew "foo"          Brewfile-style (equivalent to brew:foo)
+

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Install Claude-related apps and VS Code extension"
-#MISE depends=["brew:apply"]
+#MISE depends=["brew:apply", "vscode:apply"]
 #MISE sources=["tasks/claude/Brewfile"]
 set -euo pipefail
 

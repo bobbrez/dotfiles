@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-#MISE description="Apply macOS defaults (runs once, tracked via .osx_setup)"
-#MISE sources=["tasks/osx/apply"]
+#MISE description="Install App Store apps and apply macOS defaults (defaults run once, tracked via .osx_setup)"
+#MISE depends=["brew:apply"]
+#MISE sources=["tasks/osx/apply", "tasks/osx/Brewfile"]
 #MISE outputs=[".osx_setup"]
 set -euo pipefail
 
+source "$MISE_PROJECT_ROOT/lib/brew.sh"
+ensure_brew "$MISE_PROJECT_ROOT/tasks/osx/Brewfile"
+
 SENTINEL="$MISE_PROJECT_ROOT/.osx_setup"
 if [[ -f "$SENTINEL" ]]; then
-  echo "OSX setup already run (delete $SENTINEL to re-run)"
+  echo "OSX defaults already applied (delete $SENTINEL to re-run)"
   exit 0
 fi
 

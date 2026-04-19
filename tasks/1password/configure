@@ -1,5 +1,6 @@
 #!/usr/bin/env zsh
 #MISE description="Interactively pick 1Password SSH keys to sync"
+#MISE depends=["1password:bundle", "1password:tools"]
 #MISE alias="1p:configure"
 # Interactively pick which 1Password SSH keys to sync to ~/.ssh on setup.
 # Writes the selection to tasks/1password/1password_keys; the 1password:sync task reads it.

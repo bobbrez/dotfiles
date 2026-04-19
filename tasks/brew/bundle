@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-#MISE description="Bundle the root Brewfile"
+#MISE description="Bundle all root-level Brewfiles (Brewfile + tools.Brewfile + additional.Brewfile)"
 #MISE depends=["brew:install"]
-#MISE sources=["Brewfile"]
+#MISE sources=["Brewfile", "tools.Brewfile", "additional.Brewfile"]
 set -euo pipefail
 
 source "$MISE_PROJECT_ROOT/lib/brew.sh"
 ensure_brew "$MISE_PROJECT_ROOT/Brewfile"
+ensure_brew "$MISE_PROJECT_ROOT/tools.Brewfile"
+ensure_brew "$MISE_PROJECT_ROOT/additional.Brewfile"

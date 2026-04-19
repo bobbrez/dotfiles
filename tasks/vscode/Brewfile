@@ -1,0 +1,4 @@
+cask "visual-studio-code"
+vscode "github.copilot-chat"
+vscode "github.vscode-github-actions"
+vscode "ms-azuretools.vscode-containers"

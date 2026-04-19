@@ -43,7 +43,8 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 # uninstall by removing these lines
 [[ -f ~/.config/tabtab/__tabtab.zsh ]] && . ~/.config/tabtab/__tabtab.zsh || true
 
-echo 'export PATH="/usr/local/opt/openjdk/bin:$PATH"' >> ~/.zshrcexport PATH="/usr/local/opt/openjdk/bin:$PATH"
+# OpenJDK (via Homebrew) — only fires if installed.
+[[ -d /opt/homebrew/opt/openjdk/bin ]] && export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 
 # Added by serverless binary installer
 export PATH="$HOME/.serverless/bin:$PATH"
@@ -52,3 +53,41 @@ source $ZSH/oh-my-zsh.sh
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# dotfiles: warn on shell startup if installed brew packages aren't tracked in
+# any Brewfile. Checks formulae + casks (mas + vscode entries skipped for speed).
+dotfiles_brew_drift_check() {
+  [[ -o interactive ]] || return 0
+  local DOTFILES="${DOTFILES_PATH:-$HOME/.dotfiles}"
+  [[ -f "$DOTFILES/Brewfile" ]] || return 0
+  command -v brew >/dev/null 2>&1 || return 0
+
+  local tracked=$(
+    cat "$DOTFILES/Brewfile" "$DOTFILES/tools.Brewfile" "$DOTFILES/additional.Brewfile" 2>/dev/null \
+      | awk -F'"' '/^(brew|cask)[[:space:]]+"/ { print $2 }'
+  )
+  local ignored=""
+  if [[ -f "$DOTFILES/.brewfileignore" ]]; then
+    # Accept: "name", "type:name", or Brewfile-style `brew "name"` / `cask "name"` / etc.
+    ignored=$(
+      grep -Ev '^[[:space:]]*(#|$)' "$DOTFILES/.brewfileignore" \
+        | sed -E \
+            -e 's/^[[:space:]]*(tap|brew|cask|mas|vscode)[[:space:]]+"([^"]+)".*$/\2/' \
+            -e 's/^[[:space:]]*(tap|brew|cask|mas|vscode):(.+)$/\2/' \
+            -e 's/^[[:space:]]+//;s/[[:space:]]+$//'
+    )
+  fi
+  # `brew leaves` lists user-intent formulae only (skips transitive deps).
+  local installed=$({ brew leaves 2>/dev/null; brew list --cask -1 2>/dev/null; })
+
+  local untracked=$(
+    comm -23 <(echo "$installed" | sort -u) <(printf '%s\n%s\n' "$tracked" "$ignored" | sort -u)
+  )
+  if [[ -n "$untracked" ]]; then
+    local count=$(echo "$untracked" | wc -l | tr -d ' ')
+    print -P "%F{yellow}dotfiles: $count untracked brew package(s) — run 'mise run brew:generate' in $DOTFILES%f"
+    echo "$untracked" | head -3 | sed 's/^/  /'
+    (( count > 3 )) && echo "  ... and $((count - 3)) more"
+  fi
+}
+dotfiles_brew_drift_check

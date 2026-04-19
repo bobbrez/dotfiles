@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="Install Docker Desktop"
+#MISE depends=["brew:apply"]
+#MISE sources=["tasks/docker/Brewfile"]
+set -euo pipefail
+
+source "$MISE_PROJECT_ROOT/lib/brew.sh"
+ensure_brew "$MISE_PROJECT_ROOT/tasks/docker/Brewfile"

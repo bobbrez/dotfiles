@@ -18,6 +18,9 @@ depends = [
   "git:apply",
   "zsh:apply",
   "iterm2:apply",
+  "vscode:apply",
+  "cloudflared:apply",
+  "docker:apply",
   "claude:apply",
   "osx:apply",
 ]
