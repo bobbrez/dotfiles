@@ -26,7 +26,7 @@ plugins=(
   terraform
   docker
   pyenv
-  asdf
+  mise
   zsh-autosuggestions
   zsh-syntax-highlighting # Must go at end of config list
 )

@@ -1,6 +1,4 @@
-#!/usr/bin/env bash
-
-[ -f ~/.osx_setup ] && echo "OSX Setup already run, remove .osx_setup to re-run" && exit 0
+[ -f ~/.osx_setup ] && echo "OSX Setup already run, remove .osx_setup to re-run" && return 0
 
 # ~/.osx — https://mths.be/osx
 
