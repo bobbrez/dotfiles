@@ -17,36 +17,76 @@ done
 
 TMP_ACCOUNTS=$(mktemp)
 TMP_ITEMS=$(mktemp)
-trap 'rm -f "$TMP_ACCOUNTS" "$TMP_ITEMS"' EXIT
+TMP_FETCHER=$(mktemp)
+STTY_SAVED=$(stty -g 2>/dev/null || true)
+typeset -i TUI_LINES_PRINTED=0
+_cleanup() {
+  (( TUI_LINES_PRINTED > 0 )) && printf '\e[%dA\e[0J' $TUI_LINES_PRINTED
+  [[ -n "$STTY_SAVED" ]] && stty "$STTY_SAVED" 2>/dev/null
+  printf '\e[?25h'
+  rm -f "$TMP_ACCOUNTS" "$TMP_ITEMS" "$TMP_FETCHER"
+}
+trap _cleanup EXIT
+trap 'exit 130' INT TERM
+
+# op item list is scoped to a single account, so iterate every account the CLI knows about.
+cat > "$TMP_FETCHER" <<'FETCHER'
+set -e
+accounts_file=$1
+items_file=$2
+op account list --format=json > "$accounts_file" 2>/dev/null || true
+: > "$items_file"
+[[ -s "$accounts_file" ]] || exit 0
+jq -r '.[] | [.account_uuid, .url] | @tsv' < "$accounts_file" 2>/dev/null | \
+  while IFS=$'\t' read -r aid url; do
+    op item list --account "$aid" --categories 'SSH Key' --format=json 2>/dev/null \
+      | jq -r --arg aid "$aid" --arg url "$url" \
+          '.[] | [.id, .title, .vault.id, .vault.name, $aid, $url] | @tsv' \
+      >> "$items_file" || true
+  done
+FETCHER
 
 gum spin --spinner dot --title "Connecting to 1Password and fetching SSH keys..." -- \
-  bash -c "op account list --format=json > '$TMP_ACCOUNTS' 2>/dev/null; op item list --categories 'SSH Key' --format=json > '$TMP_ITEMS' 2>/dev/null; true"
+  bash "$TMP_FETCHER" "$TMP_ACCOUNTS" "$TMP_ITEMS"
 
 accounts=$(<"$TMP_ACCOUNTS")
 [[ -n "$accounts" && "$accounts" != "[]" ]] \
   || die "1Password CLI is not connected. In the desktop app: Settings -> Developer -> 'Integrate with 1Password CLI'."
 
-items_json=$(<"$TMP_ITEMS")
-if [[ -z "$items_json" || "$items_json" == "[]" ]]; then
+account_count=$(jq 'length' <<< "$accounts")
+
+if [[ ! -s "$TMP_ITEMS" ]]; then
   print "No SSH keys found in 1Password. Add one in the desktop app, then re-run."
   exit 0
 fi
 
-typeset -a item_ids item_titles vault_ids vault_names item_labels
-while IFS=$'\t' read -r id title vid vname; do
+typeset -a item_ids item_titles vault_ids vault_names account_ids item_labels
+while IFS=$'\t' read -r id title vid vname aid url; do
   item_ids+=$id
   item_titles+=$title
   vault_ids+=$vid
   vault_names+=$vname
-  item_labels+="$title  ($vname)"
-done < <(print -r -- "$items_json" | jq -r '.[] | [.id, .title, .vault.id, .vault.name] | @tsv')
+  account_ids+=$aid
+  local acct_short=${url%%.*}
+  if (( account_count > 1 )); then
+    item_labels+="$title  ($vname · $acct_short)"
+  else
+    item_labels+="$title  ($vname)"
+  fi
+done < "$TMP_ITEMS"
 
 typeset -A existing_name
 if [[ -f "$KEYS_FILE" ]]; then
   while IFS= read -r line; do
     [[ -z "$line" || "$line" == \#* ]] && continue
-    local f v i
-    read -r f v i <<< "$line"
+    local -a parts
+    parts=(${=line})
+    local f i
+    case ${#parts[@]} in
+      4) f=${parts[1]}; i=${parts[4]} ;;
+      3) f=${parts[1]}; i=${parts[3]} ;;
+      *) continue ;;
+    esac
     [[ -n "$i" ]] && existing_name[$i]=$f
   done < "$KEYS_FILE"
 fi
@@ -58,27 +98,96 @@ slugify() {
   print -r -- "$s"
 }
 
-typeset -a pre_selected_labels
-for (( i=1; i<=${#item_ids[@]}; i++ )); do
-  [[ -n "${existing_name[${item_ids[$i]}]}" ]] && pre_selected_labels+="${item_labels[$i]}"
+typeset -a selection_state
+typeset -i tui_n=${#item_ids[@]}
+for (( i=1; i<=tui_n; i++ )); do
+  if [[ -n "${existing_name[${item_ids[$i]}]}" ]]; then
+    selection_state[$i]=1
+  else
+    selection_state[$i]=0
+  fi
 done
-selected_arg=${(j:,:)pre_selected_labels}
+typeset -i tui_cursor=1
 
-local chosen
-if ! chosen=$(gum choose \
-  --no-limit \
-  --height 20 \
-  --header "Select SSH keys to sync to ~/.ssh  (space: toggle, enter: confirm)" \
-  ${selected_arg:+--selected="$selected_arg"} \
-  -- "${item_labels[@]}"); then
-  print "Aborted."
-  exit 0
-fi
+C_HEADER=$'\e[1;38;5;99m'
+C_CURSOR=$'\e[38;5;212m'
+C_CHECK=$'\e[38;5;42m'
+C_DIM=$'\e[2m'
+C_RESET=$'\e[0m'
+
+_tui_render() {
+  (( TUI_LINES_PRINTED > 0 )) && printf '\e[%dA\e[0J' $TUI_LINES_PRINTED
+  local -i lines=0
+  print -- "${C_HEADER}Select SSH keys to sync to ~/.ssh${C_RESET}"; ((lines++))
+  print -- "${C_DIM}↑/↓ or j/k: move  ·  enter: toggle  ·  w: write  ·  esc: cancel${C_RESET}"; ((lines++))
+  print; ((lines++))
+  for (( i=1; i<=tui_n; i++ )); do
+    local mark="•" color="" cursor_prefix="  "
+    if [[ "${selection_state[$i]}" == 1 ]]; then
+      mark="✓"; color="$C_CHECK"
+    fi
+    if (( i == tui_cursor )); then
+      cursor_prefix="${C_CURSOR}> ${C_RESET}"
+    fi
+    print -- "${cursor_prefix}${color}${mark}${C_RESET} ${item_labels[$i]}"
+    ((lines++))
+  done
+  TUI_LINES_PRINTED=$lines
+}
+
+stty -echo -icanon min 1 time 0
+printf '\e[?25l'
+
+while :; do
+  _tui_render
+
+  local key=
+  read -sk 1 key 2>/dev/null || { key=""; }
+
+  case "$key" in
+    $'\e')
+      local key2= key3=
+      if read -sk 1 -t 0.1 key2 2>/dev/null && [[ "$key2" == "[" ]] \
+         && read -sk 1 -t 0.1 key3 2>/dev/null; then
+        case "$key3" in
+          A) (( tui_cursor > 1 )) && (( tui_cursor-- )) ;;
+          B) (( tui_cursor < tui_n )) && (( tui_cursor++ )) ;;
+        esac
+      else
+        (( TUI_LINES_PRINTED > 0 )) && printf '\e[%dA\e[0J' $TUI_LINES_PRINTED
+        TUI_LINES_PRINTED=0
+        stty "$STTY_SAVED"
+        printf '\e[?25h'
+        if gum confirm --default=false "Exit without saving changes to $KEYS_FILE?"; then
+          print "Aborted."
+          exit 0
+        fi
+        stty -echo -icanon min 1 time 0
+        printf '\e[?25l'
+      fi
+      ;;
+    $'\n'|$'\r')
+      if [[ "${selection_state[$tui_cursor]}" == 1 ]]; then
+        selection_state[$tui_cursor]=0
+      else
+        selection_state[$tui_cursor]=1
+      fi
+      ;;
+    j) (( tui_cursor < tui_n )) && (( tui_cursor++ )) ;;
+    k) (( tui_cursor > 1 )) && (( tui_cursor-- )) ;;
+    w|W) break ;;
+  esac
+done
+
+(( TUI_LINES_PRINTED > 0 )) && printf '\e[%dA\e[0J' $TUI_LINES_PRINTED
+TUI_LINES_PRINTED=0
+stty "$STTY_SAVED"
+printf '\e[?25h'
 
 typeset -A chosen_set
-while IFS= read -r label; do
-  [[ -n "$label" ]] && chosen_set[$label]=1
-done <<< "$chosen"
+for (( i=1; i<=tui_n; i++ )); do
+  [[ "${selection_state[$i]}" == 1 ]] && chosen_set[${item_labels[$i]}]=1
+done
 
 typeset -A final_name
 for (( i=1; i<=${#item_ids[@]}; i++ )); do
@@ -103,11 +212,11 @@ mkdir -p "${KEYS_FILE:h}"
 tmp=$(mktemp)
 {
   print "# Managed by tasks/1password/configure — 1Password SSH keys to sync on setup"
-  print "# Format: <filename> <vault_id> <item_id>"
+  print "# Format: <filename> <account_uuid> <vault_id> <item_id>"
   for (( i=1; i<=${#item_ids[@]}; i++ )); do
     local iid=${item_ids[$i]}
     local fn=${final_name[$iid]}
-    [[ -n "$fn" ]] && print "$fn ${vault_ids[$i]} $iid"
+    [[ -n "$fn" ]] && print "$fn ${account_ids[$i]} ${vault_ids[$i]} $iid"
   done
 } > "$tmp"
 mv "$tmp" "$KEYS_FILE"

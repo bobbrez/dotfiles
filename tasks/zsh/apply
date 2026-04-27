@@ -49,6 +49,25 @@ else
   git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$P10K_DIR"
 fi
 
+AUTOSUGGESTIONS_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-autosuggestions"
+if [[ -d "$AUTOSUGGESTIONS_DIR/.git" ]]; then
+  echo "Updating zsh-autosuggestions"
+  git -C "$AUTOSUGGESTIONS_DIR" pull --quiet
+else
+  echo "Installing zsh-autosuggestions"
+  git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions "$AUTOSUGGESTIONS_DIR"
+fi
+
+SYNTAXHIGHLIGHTING_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting"
+if [[ -d "$SYNTAXHIGHLIGHTING_DIR/.git" ]]; then
+  echo "Updating zsh-syntax-highlighting"
+  git -C "$SYNTAXHIGHLIGHTING_DIR" pull --quiet
+else
+  echo "Installing zsh-syntax-highlighting"
+  git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting "$SYNTAXHIGHLIGHTING_DIR"
+fi
+
+
 # Symlink configs unconditionally (fixes the case where OMZ was already
 # installed but ~/.zshrc was never linked).
 link_dotfile "$TASK_DIR/zshrc" "$HOME/.zshrc"

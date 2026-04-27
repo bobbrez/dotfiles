@@ -1,3 +1,16 @@
+Host dev-mm1-03-ssh.lumber.host
+  HostName dev-mm1-03-ssh.lumber.host
+  User develop
+
+Host dev-camera-01.local
+  HostName dev-camera-01.local
+  User develop
+  IdentityFile ~/.ssh/ansible
+
+Host dev-camera-01.local
+  HostName dev-camera-01.local
+  User develop
+
 Host *
   AddKeysToAgent yes
   UseKeychain yes

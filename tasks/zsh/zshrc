@@ -91,3 +91,4 @@ dotfiles_brew_drift_check() {
   fi
 }
 dotfiles_brew_drift_check
+export PATH="$PATH:/Users/bob/.influxdb/"

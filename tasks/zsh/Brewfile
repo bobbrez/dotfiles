@@ -1,3 +1,2 @@
 brew "direnv"
 brew "the_silver_searcher"
-brew "zsh-syntax-highlighting"

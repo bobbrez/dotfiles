@@ -17,9 +17,25 @@ chmod 700 ~/.ssh
 
 echo "Syncing SSH keys from 1Password -> ~/.ssh"
 
+# Keeps op scoped to the right account when the keys file includes one.
+op_read() {
+  if [[ -n "${aid:-}" ]]; then
+    op --account "$aid" read "$@"
+  else
+    op read "$@"
+  fi
+}
+
 while IFS= read -r line; do
   [[ -z "$line" || "$line" == \#* ]] && continue
-  read -r fname vid iid <<< "$line"
+
+  read -ra parts <<< "$line"
+  aid=""
+  case ${#parts[@]} in
+    4) fname=${parts[0]}; aid=${parts[1]}; vid=${parts[2]}; iid=${parts[3]} ;;
+    3) fname=${parts[0]};                  vid=${parts[1]}; iid=${parts[2]} ;;
+    *) continue ;;
+  esac
   [[ -z "${fname:-}" || -z "${vid:-}" || -z "${iid:-}" ]] && continue
 
   priv="$HOME/.ssh/$fname"
@@ -29,7 +45,7 @@ while IFS= read -r line; do
     echo "  $fname already present -- skipping fetch (delete to re-sync)"
   else
     echo "  Fetching $fname from 1Password..."
-    if op read "op://$vid/$iid/private key?ssh-format=openssh" > "$priv.tmp" 2>/dev/null; then
+    if op_read "op://$vid/$iid/private key?ssh-format=openssh" > "$priv.tmp" 2>/dev/null; then
       mv "$priv.tmp" "$priv"
       chmod 600 "$priv"
     else
@@ -38,7 +54,7 @@ while IFS= read -r line; do
       continue
     fi
 
-    if op read "op://$vid/$iid/public key" > "$pub.tmp" 2>/dev/null; then
+    if op_read "op://$vid/$iid/public key" > "$pub.tmp" 2>/dev/null; then
       mv "$pub.tmp" "$pub"
       chmod 644 "$pub"
     else

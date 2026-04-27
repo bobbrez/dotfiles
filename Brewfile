@@ -4,7 +4,6 @@
 brew "cloudflared"
 brew "direnv"
 brew "the_silver_searcher"
-brew "zsh-syntax-highlighting"
 cask "1password"
 cask "1password-cli"
 cask "claude"
