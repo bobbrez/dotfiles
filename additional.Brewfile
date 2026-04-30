@@ -5,6 +5,8 @@
 brew "aws-vault"
 brew "awscli"
 brew "pyenv-virtualenv"
+cask "bambu-studio"
+cask "balenaetcher"
 cask "font-fira-code"
 cask "font-meslo-lg"
 cask "google-chrome"
