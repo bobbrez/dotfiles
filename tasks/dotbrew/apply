@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+#MISE description="Symlink dotbrew into ~/.local/bin"
+set -euo pipefail
+
+source "$MISE_PROJECT_ROOT/lib/symlink.sh"
+
+mkdir -p "$HOME/.local/bin"
+chmod +x "$MISE_PROJECT_ROOT/bin/dotbrew"
+link_dotfile "$MISE_PROJECT_ROOT/bin/dotbrew" "$HOME/.local/bin/dotbrew"

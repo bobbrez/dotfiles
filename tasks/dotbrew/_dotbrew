@@ -1,0 +1,44 @@
+#compdef dotbrew
+
+_dotbrew() {
+  local state
+  _arguments -C \
+    '1: :->cmd' \
+    '*::arg:->args'
+
+  case $state in
+    cmd)
+      _values 'subcommand' \
+        'install[Install via brew and track in a Brewfile]' \
+        'uninstall[Untrack and uninstall]' \
+        'remove[Alias for uninstall]' \
+        'rm[Alias for uninstall]' \
+        'add[Track an installed package without re-installing]' \
+        'untrack[Remove from Brewfiles without uninstalling]' \
+        'help[Show usage]'
+      ;;
+    args)
+      case $words[1] in
+        uninstall|remove|rm|untrack)
+          local dot="${DOTFILES_PATH:-$HOME/.dotfiles}"
+          local -a tracked
+          tracked=(${(f)"$(grep -hE '^[[:space:]]*(brew|cask)[[:space:]]+"' \
+            "$dot"/Brewfile "$dot"/tools.Brewfile "$dot"/additional.Brewfile \
+            "$dot"/tasks/*/Brewfile 2>/dev/null \
+            | sed -E 's/^[[:space:]]*(brew|cask)[[:space:]]+"([^"]+)".*/\2/' \
+            | sort -u)"})
+          _describe 'tracked package' tracked
+          ;;
+        install|add)
+          if (( $+functions[_brew] )); then
+            _brew
+          else
+            _files
+          fi
+          ;;
+      esac
+      ;;
+  esac
+}
+
+_dotbrew "$@"

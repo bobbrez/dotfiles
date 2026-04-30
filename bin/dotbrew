@@ -1,0 +1,235 @@
+#!/usr/bin/env bash
+# dotbrew — proxy to brew that keeps Brewfiles in your dotfiles repo in sync.
+#
+# Usage:
+#   dotbrew install [--cask] <pkg>...   brew install + add to a Brewfile
+#   dotbrew uninstall <pkg>...          remove from Brewfiles + brew uninstall
+#   dotbrew add [--cask] <pkg>...       add to a Brewfile without installing
+#   dotbrew untrack <pkg>...            remove from Brewfiles, don't uninstall
+#   dotbrew <anything>                  passthrough to brew (search, info, ...)
+#
+# Env: DOTFILES_PATH (default: $HOME/.dotfiles)
+
+set -euo pipefail
+
+DOTFILES_PATH="${DOTFILES_PATH:-$HOME/.dotfiles}"
+
+die() { printf 'dotbrew: %s\n' "$*" >&2; exit 1; }
+say() { printf '%s\n' "$*"; }
+
+usage() {
+  sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+# Echo every Brewfile this repo manages, in display order.
+list_brewfiles() {
+  [[ -d "$DOTFILES_PATH" ]] || die "DOTFILES_PATH not found: $DOTFILES_PATH"
+  local f
+  for f in \
+    "$DOTFILES_PATH/Brewfile" \
+    "$DOTFILES_PATH/tools.Brewfile" \
+    "$DOTFILES_PATH/additional.Brewfile"; do
+    [[ -f "$f" ]] && printf '%s\n' "$f"
+  done
+  for f in "$DOTFILES_PATH"/tasks/*/Brewfile; do
+    [[ -f "$f" ]] && printf '%s\n' "$f"
+  done
+}
+
+rel_to_dotfiles() { printf '%s\n' "${1#"$DOTFILES_PATH"/}"; }
+
+# Pick one path from a list. Uses gum if available, else read -p.
+pick_path() {
+  local prompt="$1"; shift
+  local -a files=("$@")
+  (( ${#files[@]} > 0 )) || die "no Brewfiles available"
+  if (( ${#files[@]} == 1 )); then
+    printf '%s\n' "${files[0]}"
+    return
+  fi
+  local -a labels=()
+  local f
+  for f in "${files[@]}"; do labels+=("$(rel_to_dotfiles "$f")"); done
+  local choice
+  if command -v gum >/dev/null 2>&1; then
+    choice=$(printf '%s\n' "${labels[@]}" \
+      | gum choose --header "$prompt") || die "cancelled"
+  else
+    say "$prompt" >&2
+    local i=1
+    for f in "${labels[@]}"; do printf '  %d) %s\n' "$i" "$f" >&2; (( i++ )); done
+    local n
+    read -r -p "select> " n
+    [[ "$n" =~ ^[0-9]+$ ]] || die "cancelled"
+    (( n >= 1 && n <= ${#labels[@]} )) || die "out of range"
+    choice="${labels[$((n-1))]}"
+  fi
+  printf '%s\n' "$DOTFILES_PATH/$choice"
+}
+
+# Decide whether <pkg> is a formula or cask. Sets global TYPE.
+detect_type() {
+  local pkg="$1"
+  if   brew list --formula "$pkg" >/dev/null 2>&1; then TYPE=brew
+  elif brew list --cask    "$pkg" >/dev/null 2>&1; then TYPE=cask
+  elif brew info --formula "$pkg" >/dev/null 2>&1; then TYPE=brew
+  elif brew info --cask    "$pkg" >/dev/null 2>&1; then TYPE=cask
+  else die "unknown package '$pkg' (not a formula or cask)"
+  fi
+}
+
+entry_pattern() {
+  # $1=type, $2=name → grep -E pattern matching `type "name"` lines.
+  printf '^[[:space:]]*%s[[:space:]]+"%s"' "$1" "$2"
+}
+
+# Echo each Brewfile that contains an entry for type/name (relative paths).
+find_in_brewfiles() {
+  local pattern; pattern=$(entry_pattern "$1" "$2")
+  local f
+  while IFS= read -r f; do
+    grep -qE "$pattern" "$f" && printf '%s\n' "$f"
+  done < <(list_brewfiles)
+}
+
+# Same as above but matches either brew or cask for a name.
+find_any_type() {
+  local name="$1"
+  local pattern='^[[:space:]]*(brew|cask)[[:space:]]+"'"$name"'"'
+  local f
+  while IFS= read -r f; do
+    grep -qE "$pattern" "$f" && printf '%s\n' "$f"
+  done < <(list_brewfiles)
+}
+
+add_to_brewfile() {
+  local file="$1" type="$2" name="$3"
+  local pattern; pattern=$(entry_pattern "$type" "$name")
+  if grep -qE "$pattern" "$file"; then
+    say "already in $(rel_to_dotfiles "$file")"
+    return 0
+  fi
+  printf '%s "%s"\n' "$type" "$name" >> "$file"
+  say "tracked ${type} \"${name}\" in $(rel_to_dotfiles "$file")"
+}
+
+remove_from_brewfile() {
+  local file="$1" type="$2" name="$3"
+  local pattern; pattern=$(entry_pattern "$type" "$name")
+  grep -qE "$pattern" "$file" || return 1
+  local tmp; tmp=$(mktemp)
+  grep -vE "$pattern" "$file" > "$tmp"
+  mv "$tmp" "$file"
+  say "untracked ${type} \"${name}\" from $(rel_to_dotfiles "$file")"
+}
+
+track_pkg() {
+  local type="$1" name="$2"
+  local -a hits=()
+  while IFS= read -r f; do hits+=("$f"); done < <(find_in_brewfiles "$type" "$name")
+  if (( ${#hits[@]} > 0 )); then
+    say "${type} \"${name}\" already tracked in:"
+    local h; for h in "${hits[@]}"; do say "  $(rel_to_dotfiles "$h")"; done
+    return 0
+  fi
+  local -a files=()
+  while IFS= read -r f; do files+=("$f"); done < <(list_brewfiles)
+  local dest; dest=$(pick_path "Add ${type} \"${name}\" to:" "${files[@]}")
+  add_to_brewfile "$dest" "$type" "$name"
+}
+
+untrack_pkg() {
+  local name="$1"
+  local -a hits=()
+  while IFS= read -r f; do hits+=("$f"); done < <(find_any_type "$name")
+  if (( ${#hits[@]} == 0 )); then
+    say "'$name' not tracked in any Brewfile"
+    return 0
+  fi
+  local target
+  if (( ${#hits[@]} == 1 )); then
+    target="${hits[0]}"
+  else
+    target=$(pick_path "'$name' is tracked in multiple files — remove from:" "${hits[@]}")
+  fi
+  local pattern='^[[:space:]]*(brew|cask)[[:space:]]+"'"$name"'"'
+  local type
+  type=$(grep -E "$pattern" "$target" | head -1 | awk '{print $1}')
+  remove_from_brewfile "$target" "$type" "$name"
+}
+
+cmd_install() {
+  local cask=0
+  local -a brew_args=() pkgs=()
+  while (( $# )); do
+    case "$1" in
+      --cask)  cask=1;       brew_args+=("$1"); shift ;;
+      -*)                    brew_args+=("$1"); shift ;;
+      *)       pkgs+=("$1"); brew_args+=("$1"); shift ;;
+    esac
+  done
+  (( ${#pkgs[@]} )) || die "install: need at least one package"
+  brew install "${brew_args[@]}"
+  local pkg type
+  for pkg in "${pkgs[@]}"; do
+    if (( cask )); then
+      type=cask
+    else
+      detect_type "$pkg"; type=$TYPE
+    fi
+    track_pkg "$type" "$pkg"
+  done
+}
+
+cmd_uninstall() {
+  local -a brew_args=() pkgs=()
+  while (( $# )); do
+    case "$1" in
+      -*)  brew_args+=("$1"); shift ;;
+      *)   pkgs+=("$1"); brew_args+=("$1"); shift ;;
+    esac
+  done
+  (( ${#pkgs[@]} )) || die "uninstall: need at least one package"
+  # Untrack first so a later `brew bundle` won't reinstall.
+  local pkg
+  for pkg in "${pkgs[@]}"; do untrack_pkg "$pkg"; done
+  brew uninstall "${brew_args[@]}"
+}
+
+cmd_add() {
+  local cask=0
+  local -a pkgs=()
+  while (( $# )); do
+    case "$1" in
+      --cask)  cask=1; shift ;;
+      *)       pkgs+=("$1"); shift ;;
+    esac
+  done
+  (( ${#pkgs[@]} )) || die "add: need at least one package"
+  local pkg type
+  for pkg in "${pkgs[@]}"; do
+    if (( cask )); then type=cask; else detect_type "$pkg"; type=$TYPE; fi
+    track_pkg "$type" "$pkg"
+  done
+}
+
+cmd_untrack() {
+  (( $# )) || die "untrack: need at least one package"
+  local pkg; for pkg in "$@"; do untrack_pkg "$pkg"; done
+}
+
+main() {
+  if (( $# == 0 )); then usage; exit 0; fi
+  command -v brew >/dev/null 2>&1 || die "brew not found on PATH"
+  local sub="$1"; shift
+  case "$sub" in
+    install)             cmd_install   "$@" ;;
+    uninstall|remove|rm) cmd_uninstall "$@" ;;
+    add)                 cmd_add       "$@" ;;
+    untrack)             cmd_untrack   "$@" ;;
+    -h|--help|help)      usage ;;
+    *)                   exec brew "$sub" "$@" ;;
+  esac
+}
+
+main "$@"

@@ -11,10 +11,7 @@ if ! command -v git >/dev/null 2>&1; then
   exit 1
 fi
 
-if [ -d "$DOTFILES_PATH/.git" ]; then
-  echo "Updating $DOTFILES_PATH"
-  git -C "$DOTFILES_PATH" pull --ff-only
-else
+if [ ! -d "$DOTFILES_PATH/.git" ]; then
   echo "Cloning $DOTFILES_REPO into $DOTFILES_PATH"
   git clone "$DOTFILES_REPO" "$DOTFILES_PATH"
 fi
@@ -26,4 +23,11 @@ if ! command -v mise >/dev/null 2>&1; then
 fi
 
 cd "$DOTFILES_PATH"
-exec mise run apply "$@"
+mise run apply "$@"
+
+# Sync to origin only after a successful apply, so a failed run leaves the
+# working tree alone for debugging and doesn't fast-forward over local edits
+# mid-flight. New upstream changes are picked up on the next install.sh run.
+echo "==> Syncing $DOTFILES_PATH with origin"
+git -C "$DOTFILES_PATH" pull --ff-only \
+  || echo "warning: pull --ff-only failed (local commits or diverged); skipping."

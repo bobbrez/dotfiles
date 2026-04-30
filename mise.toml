@@ -23,6 +23,7 @@ depends = [
   "docker:apply",
   "claude:apply",
   "osx:apply",
+  "dotbrew:apply",
 ]
 run = '''
 if [[ -f "$MISE_PROJECT_ROOT/.needs_restart" ]]; then
