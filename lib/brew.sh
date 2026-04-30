@@ -11,6 +11,23 @@ ensure_brew_on_path() {
   fi
 }
 
+# Prime sudo and keep its 5-minute timestamp warm for the lifetime of $$.
+# Cask and `softwareupdate` invocations call sudo themselves; without this
+# they re-prompt every time the timestamp expires mid-bundle. Idempotent.
+start_sudo_keepalive() {
+  [[ -n "${_DOTFILES_SUDO_KEEPALIVE_PID:-}" ]] && return 0
+  [[ "${DOTFILES_SKIP_BREW:-}" == "1" ]] && return 0
+  # Best-effort: if there's no TTY (CI, non-interactive), skip and let
+  # casks prompt as they normally would rather than aborting the run.
+  sudo -v 2>/dev/null || { echo "==> sudo unavailable; cask installs may prompt individually" >&2; return 0; }
+  ( while kill -0 "$$" 2>/dev/null; do
+      sudo -n true 2>/dev/null || exit
+      sleep 50
+    done ) &
+  _DOTFILES_SUDO_KEEPALIVE_PID=$!
+  trap 'kill "$_DOTFILES_SUDO_KEEPALIVE_PID" 2>/dev/null || true' EXIT
+}
+
 # `mas install` on Apple Silicon fails for some apps without Rosetta 2.
 # Only needed on arm64; the marker file is Apple's documented detection path.
 ensure_rosetta_for_brewfile() {

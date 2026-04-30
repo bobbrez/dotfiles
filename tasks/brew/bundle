@@ -5,6 +5,7 @@
 set -euo pipefail
 
 source "$MISE_PROJECT_ROOT/lib/brew.sh"
+start_sudo_keepalive
 ensure_brew "$MISE_PROJECT_ROOT/Brewfile"
 ensure_brew "$MISE_PROJECT_ROOT/tools.Brewfile"
 ensure_brew "$MISE_PROJECT_ROOT/additional.Brewfile"
