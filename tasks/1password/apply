@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
-#MISE description="Apply full 1Password SSH key sync (bundle + check + configure-if-needed + sync)"
+#MISE description="Apply 1Password setup (bundle + check + init shell plugins)"
 #MISE depends=["1password:check"]
 set -euo pipefail
 
-TASK_DIR="$MISE_PROJECT_ROOT/tasks/1password"
-KEYS_FILE="$TASK_DIR/1password_keys"
+PLUGINS_USED_DIR="$HOME/.config/op/plugins/used_items"
 
-while [[ ! -f "$KEYS_FILE" ]]; do
-  echo
-  echo "No $KEYS_FILE -- launching configure to pick SSH keys from 1Password"
-  echo
-  mise run 1password:configure
-  echo
-  read -r -p "Press enter once finished to continue... "
-  if [[ ! -f "$KEYS_FILE" ]]; then
-    echo "$KEYS_FILE still missing -- re-running configure."
+ensure_op_plugin() {
+  local plugin=$1
+  local marker="$PLUGINS_USED_DIR/$plugin.json"
+  if [[ -s "$marker" ]] && [[ "$(cat "$marker")" != "[]" ]]; then
+    echo "  $plugin plugin already configured"
+    return 0
   fi
-done
+  echo
+  echo "Configuring 1Password shell plugin: $plugin"
+  op plugin init "$plugin"
+}
 
-mise run 1password:sync
+for plugin in aws cdk; do
+  ensure_op_plugin "$plugin"
+done
